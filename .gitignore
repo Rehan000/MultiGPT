@@ -1,3 +1,4 @@
 models/*
 chat_sessions/*
+chroma_db/*
 llama.log

@@ -1,4 +1,5 @@
 from langchain.chains import StuffDocumentsChain, LLMChain, ConversationalRetrievalChain
+from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.embeddings import HuggingFaceInstructEmbeddings
 from langchain.memory import ConversationBufferWindowMemory
 from langchain.prompts import PromptTemplate
@@ -156,6 +157,93 @@ def load_vectordb(embeddings):
     )
 
     return langchain_chroma
+
+def load_pdf_chat_chain(chat_history):
+    """
+        Loads a PDF-specific conversational chain using the provided chat history.
+
+        This function initializes a `pdfChatChain` object with the provided chat history,
+        setting up a conversational chain tailored for interactions involving PDF content.
+
+        Args:
+            chat_history (ChatMessageHistory): An object containing the history of messages
+                exchanged in the conversation.
+
+        Returns:
+            pdfChatChain: An instance of `pdfChatChain` initialized with the provided chat history.
+    """
+    return pdfChatChain(chat_history)
+
+def load_retrieval_chain(llm, memory, vector_db):
+    """
+        Loads a retrieval-based question-answering chain using the provided language model, memory, and vector database.
+
+        This function initializes a `RetrievalQA` object that combines a language model (LLM) with memory and a retriever
+        built from a vector database. The retrieval-based QA chain allows for question answering by fetching relevant
+        information from the vector database using the retriever.
+
+        Args:
+            llm: The language model to be used for generating answers.
+            memory: A memory component that stores the conversation history for contextual understanding.
+            vector_db: A vector database object used to retrieve relevant information based on the input query.
+
+        Returns:
+            RetrievalQA: An instance of `RetrievalQA` configured with the specified language model, memory, and retriever.
+    """
+    return RetrievalQA.from_llm(llm=llm, memory=memory, retriever=vector_db.as_retriever())
+
+class pdfChatChain:
+    """
+        A class to manage a PDF-specific conversational AI chain using a language model, vector database, and memory.
+
+        The `pdfChatChain` class is designed to handle and manage conversations involving PDF content using
+        a language model (LLM), a retriever for fetching relevant information from a vector database,
+        and memory to retain the context of the conversation.
+
+        Attributes:
+            memory (ConversationBufferWindowMemory): A memory object that stores a sliding window of recent
+                messages in the conversation.
+            vector_db (Chroma): A vector database used to store and retrieve relevant information for answering queries.
+            llm_chain (RetrievalQA): A retrieval-based question-answering chain that combines the language model,
+                memory, and retriever.
+
+        Methods:
+            __init__(chat_history):
+                Initializes the `pdfChatChain` object by setting up the memory, vector database, and retrieval-based QA chain.
+
+            run(user_input):
+                Processes user input through the retrieval-based QA chain and generates a response based on the conversation history.
+    """
+    def __init__(self, chat_history):
+        """
+            Initializes the `pdfChatChain` instance.
+
+            Args:
+                chat_history (ChatMessageHistory): An object containing the history of messages
+                    exchanged in the conversation.
+
+            Initializes:
+                - `self.memory`: Creates a conversation memory using the provided chat history.
+                - `self.vector_db`: Loads a vector database using embeddings for retrieving relevant information.
+                - `self.llm_chain`: Creates a retrieval-based QA chain with the initialized language model, memory, and vector database.
+        """
+        self.memory = create_chat_memory(chat_history)
+        self.vector_db = load_vectordb(create_embeddings())
+        llm = create_llm()
+        # chat_prompt = create_prompt_from_template(memory_prompt_template)
+        self.llm_chain = load_retrieval_chain(llm,  self.memory, self.vector_db)
+
+    def run(self, user_input):
+        """
+            Runs the conversational AI chain with the provided user input.
+
+            Args:
+                user_input (str): The user's input or query.
+
+            Returns:
+                str: The generated response from the language model based on the input and conversation history.
+        """
+        return self.llm_chain.run(query=user_input, history=self.memory.chat_memory.messages, stop=["Human:"])
 
 class chatChain:
     """
