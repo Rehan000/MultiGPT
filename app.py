@@ -123,6 +123,7 @@ def save_chat_history():
 
 
 def main():
+    st.set_page_config(page_title='MultiGPT')
     st.title("MultiGPT :computer:")
     chat_container = st.container()
     st.sidebar.title("Chat Sessions")
