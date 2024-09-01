@@ -50,7 +50,7 @@ def create_embeddings(embeddings_path=config['embeddings_path']):
            HuggingFaceInstructEmbeddings: An instance of the embeddings model initialized
            with the specified path.
     """
-    return HuggingFaceInstructEmbeddings(embeddings_path)
+    return HuggingFaceInstructEmbeddings(model_name=embeddings_path)
 
 
 def create_chat_memory(chat_history):
@@ -130,6 +130,32 @@ def load_normal_chain(chat_history):
     """
     return chatChain(chat_history)
 
+
+def load_vectordb(embeddings):
+    """
+        Loads or initializes a persistent vector database using embeddings.
+
+        This function sets up a persistent vector database using ChromaDB with the provided
+        embeddings function. It connects to a ChromaDB instance and loads a collection
+        named "pdfs" for storing and retrieving vectorized data.
+
+        Args:
+            embeddings: An embedding function or model used to convert data into vector format
+                        for storage in the vector database.
+
+        Returns:
+            Chroma: An instance of the Chroma class configured with the persistent database client
+                    and specified embedding function.
+    """
+    persistent_client = chromadb.PersistentClient("chroma_db")
+
+    langchain_chroma = Chroma(
+        client=persistent_client,
+        collection_name="pdfs",
+        embedding_function=embeddings,
+    )
+
+    return langchain_chroma
 
 class chatChain:
     """

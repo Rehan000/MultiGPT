@@ -4,7 +4,9 @@ import streamlit as st
 from llm_chains import load_normal_chain
 from streamlit_mic_recorder import mic_recorder
 from audio_handler import transcribe_audio
+from image_handler import handle_image
 from langchain.memory import StreamlitChatMessageHistory
+from pdf_handler import add_documents_to_db
 from utils import save_chat_history_json, get_timestamp, load_chat_history_json
 
 
@@ -146,6 +148,12 @@ def main():
         send_button = st.button("Enter", key="send_button", on_click=clear_input_field)
 
     uploaded_audio = st.sidebar.file_uploader("Upload an audio file", type=['wav', 'mp3', 'ogg'])
+    uploaded_image = st.sidebar.file_uploader("Upload an image file", type=['jpg', 'jpeg', 'png'])
+    uploaded_pdf = st.sidebar.file_uploader("Upload a PDF file", accept_multiple_files=True, key="pdf_upload", type=['pdf'])
+
+    if uploaded_pdf:
+        with st.spinner("Processing PDF..."):
+            add_documents_to_db(uploaded_pdf)
 
     if uploaded_audio:
         transcribed_audio = transcribe_audio(uploaded_audio.getvalue())
@@ -156,6 +164,15 @@ def main():
         llm_chain.run(transcribed_audio)
 
     if send_button or st.session_state.send_input:
+        if uploaded_image:
+            with st.spinner("Processing Image..."):
+                user_message = "Describe this image in detail please."
+                if st.session_state.user_question != "":
+                    user_message = handle_image(uploaded_image.getvalue(), st.session_state.user_question)
+                    st.session_state.user_question = ""
+                llm_answer = handle_image(uploaded_image.getvalue(), st.session_state.user_question)
+                chat_history.add_user_message(user_message)
+                chat_history.add_ai_message(llm_answer)
         if st.session_state.user_question != "":
             # st.chat_message("user").write(st.session_state.user_question)
             llm_response = llm_chain.run(st.session_state.user_question)
